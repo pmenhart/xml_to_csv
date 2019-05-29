@@ -47,6 +47,9 @@ defmodule FlattenNestedMap do
 
   defp update_key(pk, {k, v} = _val) when is_atom(k), do: update_key(pk, {Atom.to_string(k), v})
   # take head of a list and ignore the rest
-  defp update_key(pk, {k, [h | _t]} = _val) when is_binary(k), do: {"#{pk}.#{k}", h}
+  defp update_key(pk, {k, [h | t]} = _val) when is_binary(k) do
+    IO.puts("Skipping #{length(t)} values of #{pk}.#{k}")
+    {"#{pk}.#{k}", h}
+  end
   defp update_key(pk, {k, v} = _val) when is_binary(k), do: {"#{pk}.#{k}", v}
 end
