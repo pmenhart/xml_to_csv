@@ -46,7 +46,8 @@ defmodule FlattenNestedMap do
   defp to_list(map, pk) when is_binary(pk), do: Enum.map(map, &update_key(pk, &1))
 
   defp update_key(pk, {k, v} = _val) when is_atom(k), do: update_key(pk, {Atom.to_string(k), v})
-  # take head of a list and ignore the rest
+  # Take head of a list and ignore the rest.
+  # All occurrences are recorded. Decide whether such a list should be converted into a separate child structure.
   defp update_key(pk, {k, [h | t]} = _val) when is_binary(k) do
     IO.puts("Skipping #{length(t)} values of #{pk}.#{k}")
     {"#{pk}.#{k}", h}

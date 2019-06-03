@@ -36,6 +36,28 @@ defmodule XmlToCsv do
     csv
   end
 
+  @doc """
+  Take all element["notes"]["helpdesk-note"] and convert into top level map.
+  Use element["display-id"] as an index.
+  """
+  def maps_to_notes_map(list_of_nested_maps) do
+    list_of_notes = list_of_nested_maps |> Enum.reduce([], fn el, acc ->
+      acc ++ get_notes(el) # yes, I know: appending to the end is not efficient
+    end)
+    #IO.puts("#{inspect list_of_notes}")
+    list_of_notes
+  end
+
+  defp get_notes(%{"display-id" => id, "notes" => %{"helpdesk-note" => notes }}) when is_list(notes) do
+    notes |> Enum.with_index |> Enum.map(fn {note, index} -> %{"display-id" => id, "index_of_note" => index, "note" => note} end)
+  end
+  defp get_notes(%{"display-id" => id, "notes" => %{"helpdesk-note" => note }}) when is_map(note) do
+    [%{"display-id" => id, "index_of_note" => 0, "note" => note}]
+  end
+  defp get_notes(_) do
+    []
+  end
+
   def convert_tickets(xml_path, csv_dir) do
     xml_string = File.read!(xml_path)
     map = XmlToMap.naive_map(xml_string)
@@ -44,11 +66,25 @@ defmodule XmlToCsv do
     # conversion_root = map["forum-categories"]["forum-category"]["forums"]["forum"]
     csv = maps_to_csv(conversion_root)
 
-
-    csv_path = Path.join([csv_dir, Path.basename(xml_path, ".xml") <> ".csv"])
+    basename = Path.basename(xml_path, ".xml")
+    csv_path = Path.join([csv_dir, basename <> ".csv"])
     IO.puts("#{xml_path} converted into #{csv_path}")
     # Prepend with a BOM to convince Excel this is really a UTF-8
     File.write!(csv_path, [@bom | csv], [:write])
+
+    # Produce a second CSV, capturing element["notes"]["helpdesk-note"].
+    # Use element["display-id"] as an index
+    list_of_notes = maps_to_notes_map(conversion_root)
+    notes_csv = maps_to_csv(list_of_notes)
+
+    notes_csv_path = Path.join([csv_dir, basename <> "_notes.csv"])
+    IO.puts("#{xml_path} converted into #{notes_csv_path}")
+    # Prepend with a BOM to convince Excel this is really a UTF-8
+    File.write!(notes_csv_path, [@bom | notes_csv], [:write])
+
   end
 
+  # iex -S mix
+  # XmlToCsv.convert_tickets("t.xml", ".")
+  # Path.wildcard("../input/Tickets*.xml") |> Enum.each(&XmlToCsv.convert_tickets(&1, "../output/"))
 end
